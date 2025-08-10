@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DeepWorm AI</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+body {
+    background: linear-gradient(135deg, #2a0a0a, #1a1a1a, #660000);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    background-attachment: fixed;
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
+}
+.sidebar {
+    transition: transform 0.3s ease-in-out;
+}
+.sidebar-hidden {
+    transform: translateX(-100%);
+}
+.main-content {
+    transition: margin-left 0.3s ease-in-out;
+}
+.sidebar-open .main-content {
+    margin-left: 16rem;
+}
+.message-content p {
+    margin: 0 0 10px 0;
+    line-height: 1.6;
+}
+.message-content p:last-child {
+    margin-bottom: 0;
+}
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+@keyframes fadeInIcons {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.pulse {
+    animation: pulse 1.5s infinite;
+}
+.message-actions {
+    opacity: 0;
+    animation: fadeInIcons 0.5s ease-in forwards;
+    animation-delay: 0.3s;
+}
+.messages::-webkit-scrollbar {
+    width: 8px;
+}
+.messages::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.5);
+}
+.messages::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #ff0000, #cc0000);
+    border-radius: 4px;
+}
+.messages::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, #ff3333, #ff0000);
+}
+.user-message-box {
+    background: rgba(255, 0, 0, 0.1);
+    border: 1px solid rgba(255, 0, 0, 0.3);
+    border-radius: 8px;
+    padding: 12px 16px;
+}
+.action-btn {
+    background: rgba(255, 0, 0, 0.1);
+    border: 1px solid rgba(255, 0, 0, 0.3);
+    color: #ef4444;
+    transition: all 0.2s ease;
+}
+.action-btn:hover {
+    background: rgba(255, 0, 0, 0.2);
+    border-color: #ef4444;
+    transform: scale(1.05);
+}
+.action-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+.input-disabled {
+    opacity: 0.6;
+    pointer-events: none;
+}
+.code-block {
+    background: rgba(20, 20, 20, 0.95);
+    border: 1px solid rgba(255, 0, 0, 0.3);
+    border-radius: 12px;
+    margin: 12px 0;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+.code-header {
+    background: rgba(255, 0, 0, 0.15);
+    border-bottom: 1px solid rgba(255, 0, 0, 0.3);
+    padding: 10px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+}
+.language-label {
+    color: #ff6b6b;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-family: 'Courier New', monospace;
+}
+.code-content {
+    padding: 0;
+    overflow-x: auto;
+    background: #1e1e1e;
+}
+.code-content pre {
+    margin: 0;
+    padding: 20px;
+    background: transparent;
+    font-family: 'Fira Code', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.6;
+}
+.code-content code {
+    color: #e8e8e8;
+    background: transparent;
+}
+.copy-code-btn {
+    background: rgba(255, 0, 0, 0.1);
+    border: 1px solid rgba(255, 0, 0, 0.3);
+    color: #ef4444;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-weight: 500;
+}
+.copy-code-btn:hover {
+    background: rgba(255, 0, 0, 0.2);
+    transform: scale(1.05);
+    border-color: #ff4444;
+}
+</style>
+</head>
+<body class="min-h-screen flex font-sans">
+<!-- Sidebar -->
+<div class="sidebar w-64 bg-gradient-to-b from-black to-gray-900 p-4 flex flex-col sidebar-hidden fixed h-full z-20" id="sidebar">
+    <div class="flex items-center justify-between mb-6">
+        <h2 class="text-xl font-semibold text-red-400">Chat History</h2>
+        <button class="text-gray-300 hover:text-red-400" onclick="toggleSidebar()">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+    <div class="flex-1 overflow-y-auto space-y-4" id="chatHistory">
+        <!-- Chat history items will be added dynamically -->
+    </div>
+    <button class="mt-4 bg-gradient-to-r from-red-600 to-red-500 text-white py-2 px-4 rounded-lg hover:bg-gradient-to-r hover:from-red-500 hover:to-red-400 transition-all duration-300" onclick="startNewChat()">
+        <i class="fas fa-plus mr-2"></i>New Chat
+    </button>
+</div>
+<!-- Main Content -->
+<div class="main-content flex-1 flex flex-col h-screen" id="mainContent">
+    <div class="header p-4 flex items-center justify-between">
+        <button class="text-gray-300 hover:text-red-400 text-xl" onclick="toggleSidebar()">
+            <i class="fas fa-bars"></i>
+        </button>
+        <h1 class="text-3xl font-bold text-red-400 tracking-wide">DeepWorm AI</h1>
+        <div class="w-8"></div> <!-- Spacer for alignment -->
+    </div>
+    <div class="chat-container flex-1 flex flex-col overflow-hidden">
+        <div class="messages flex-1 overflow-y-auto p-6 space-y-6" id="messages">
+            <div class="intro flex-1 flex items-center justify-center text-gray-300 text-xl" id="introMessage">
+                Welcome to DeepWorm
+            </div>
+        </div>
+        <div class="typing-indicator hidden text-red-400 italic p-4" id="typingIndicator">
+            AI is typing<span class="pulse">...</span>
+        </div>
+        <div class="input-container flex items-center gap-4 p-6" id="inputContainer">
+            <input type="file" class="file-input hidden" id="fileInput" accept="image/*">
+            <button class="upload-btn bg-gradient-to-r from-gray-700 to-gray-800 text-white py-3 px-6 rounded-lg border-2 border-red-500 hover:bg-gradient-to-r hover:from-red-600 hover:to-red-500 transform hover:scale-105 transition-all duration-300" onclick="document.getElementById('fileInput').click()">
+                <i class="fas fa-upload"></i>
+            </button>
+            <input type="text" class="message-input flex-1 p-4 bg-transparent text-white rounded-lg border-2 border-red-500 focus:outline-none focus:border-red-400 focus:ring-2 focus:ring-red-500 transition-all duration-300" id="messageInput" placeholder="Type your message here..." onkeypress="handleKeyPress(event)">
+            <button class="send-btn bg-gradient-to-r from-red-600 to-red-500 text-white py-3 px-6 rounded-lg hover:bg-gradient-to-r hover:from-red-500 hover:to-red-400 transform hover:scale-105 transition-all duration-300" id="sendBtn" onclick="sendMessage()">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </div>
+    </div>
+</div>
+<script>
+// Utility functions for localStorage
+function saveChatHistory() {
+    localStorage.setItem('deepwormChatHistory', JSON.stringify(chatHistory));
+    localStorage.setItem('deepwormCurrentChatId', currentChatId);
+    localStorage.setItem('deepwormMessageVersions', JSON.stringify(messageVersions));
+    localStorage.setItem('deepwormCurrentMessageVersions', JSON.stringify(currentMessageVersions));
+}
+
+function loadChatHistory() {
+    const savedHistory = localStorage.getItem('deepwormChatHistory');
+    if (savedHistory) {
+        chatHistory = JSON.parse(savedHistory);
+    }
+    
+    const savedCurrentChatId = localStorage.getItem('deepwormCurrentChatId');
+    if (savedCurrentChatId) {
+        currentChatId = savedCurrentChatId;
+    }
+    
+    const savedMessageVersions = localStorage.getItem('deepwormMessageVersions');
+    if (savedMessageVersions) {
+        messageVersions = JSON.parse(savedMessageVersions);
+    }
+    
+    const savedCurrentVersions = localStorage.getItem('deepwormCurrentMessageVersions');
+    if (savedCurrentVersions) {
+        currentMessageVersions = JSON.parse(savedCurrentVersions);
+    }
+}
+
+function clearAllHistory() {
+    if (confirm('Are you sure you want to clear all chat history?')) {
+        localStorage.removeItem('deepwormChatHistory');
+        localStorage.removeItem('deepwormCurrentChatId');
+        localStorage.removeItem('deepwormMessageVersions');
+        localStorage.removeItem('deepwormCurrentMessageVersions');
+        chatHistory = [];
+        currentChatId = null;
+        messageVersions = {};
+        currentMessageVersions = {};
+        startNewChat();
+    }
+}
+
+function deleteChat(chatId, event) {
+    event.stopPropagation(); // Prevent triggering the chat load
+    
+    if (confirm('Are you sure you want to delete this chat?')) {
+        // Remove from chat history
+        chatHistory = chatHistory.filter(chat => chat.id !== chatId);
+        
+        // If we're deleting the current chat, start a new one
+        if (currentChatId === chatId) {
+            startNewChat();
+        }
+        
+        // Update the UI
+        updateChatHistoryList();
+        saveChatHistory();
+    }
+}
+
+// Main chat functionality
+let isTyping = false;
+let chatHistory = [];
+let currentChatId = null;
+let messageVersions = {};
+let currentMessageVersions = {};
+
+document.getElementById('fileInput').addEventListener('change', handleFileUpload);
+
+function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const mainContent = document.getElementById('mainContent');
+    sidebar.classList.toggle('sidebar-hidden');
+    mainContent.classList.toggle('sidebar-open');
+}
+
+function handleKeyPress(event) {
+    if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        sendMessage();
+    }
+}
+
+function disableInput() {
+    document.getElementById('inputContainer').classList.add('input-disabled');
+}
+
+function enableInput() {
+    document.getElementById('inputContainer').classList.remove('input-disabled');
+}
+
+function sendMessage() {
+    const messageInput = document.getElementById('messageInput');
+    const message = messageInput.value.trim();
+    if (!message || isTyping) return;
+    
+    if (!currentChatId) {
+        startNewChat(true);
+    }
+    
+    document.getElementById('introMessage').classList.add('hidden');
+    addMessage('user', message);
+    
+    // Add user message to chat history immediately
+    updateChatHistory(currentChatId, message, null);
+    
+    messageInput.value = '';
+    disableInput();
+    showTypingIndicator();
+    
+    sendAIRequest(message);
+}
+
+function sendAIRequest(message, isRegenerate = false, messageId = null) {
+    fetch('/chat', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ message: message, chatId: currentChatId })
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let aiMessage = '';
+        let messageElement = null;
+        let currentMessageId = messageId || Date.now().toString();
+        let responseCompleted = false;
+        
+        if (isRegenerate && messageId) {
+            messageElement = document.querySelector(`[data-message-id="${messageId}"] .message-content`);
+            if (messageElement) {
+                messageElement.innerHTML = '';
+            }
+        }
+        
+        function completeResponse() {
+            if (responseCompleted) return; // Prevent double completion
+            responseCompleted = true;
+            
+            hideTypingIndicator();
+            enableInput();
+            
+            if (isRegenerate && messageId) {
+                if (!messageVersions[messageId]) {
+                    messageVersions[messageId] = [];
+                }
+                messageVersions[messageId].push(aiMessage);
+                currentMessageVersions[messageId] = messageVersions[messageId].length - 1;
+                updateMessageActions(messageId);
+                
+                // Update the chat history with the new regenerated response
+                updateChatHistoryWithRegeneration(currentChatId, messageId, aiMessage);
+            } else {
+                if (messageElement) {
+                    messageVersions[currentMessageId] = [aiMessage];
+                    currentMessageVersions[currentMessageId] = 0;
+                    addMessageActions(messageElement.closest('.message'), currentMessageId, message);
+                    
+                    // Update chat history for new message
+                    updateChatHistory(currentChatId, null, aiMessage);
+                }
+            }
+            
+            saveChatHistory();
+        }
+        
+        function processStream() {
+            return reader.read().then(({ done, value }) => {
+                if (done) {
+                    completeResponse();
+                    return;
+                }
+                
+                const chunk = decoder.decode(value);
+                const lines = chunk.split('\n');
+                
+                lines.forEach(line => {
+                    if (line.startsWith('data: ')) {
+                        try {
+                            const data = JSON.parse(line.substring(6));
+                            if (data.content) {
+                                if (!messageElement) {
+                                    messageElement = addMessage('ai', '', currentMessageId);
+                                }
+                                aiMessage += data.content;
+                                updateMessage(messageElement, aiMessage);
+                            }
+                            if (data.done) {
+                                completeResponse();
+                                return;
+                            }
+                            if (data.error) {
+                                hideTypingIndicator();
+                                enableInput();
+                                addMessage('ai', `Error: ${data.error}`);
+                                return;
+                            }
+                        } catch (e) {}
+                    }
+                });
+                return processStream();
+            });
+        }
+        return processStream();
+    })
+    .catch(error => {
+        hideTypingIndicator();
+        enableInput();
+        addMessage('ai', `Error: ${error.message}`);
+    });
+}
+
+function addMessage(sender, content, messageId = null) {
+    const messagesContainer = document.getElementById('messages');
+    const messageDiv = document.createElement('div');
+    const id = messageId || Date.now().toString();
+    messageDiv.className = `message ${sender} animate-[fadeIn_0.5s_ease-in] flex ${sender === 'user' ? 'justify-end' : 'justify-start'}`;
+    messageDiv.setAttribute('data-message-id', id);
+    
+    const label = sender === 'user' ? 'You' : 'AI Assistant';
+    const messageContent = sender === 'user'
+        ? `<div class="user-message-box">${formatMessage(content)}</div>`
+        : formatMessage(content);
+    
+    messageDiv.innerHTML = `
+        <div class="flex flex-col max-w-[80%]">
+            <div class="message-label text-gray-400 text-sm mb-1">${label}</div>
+            <div class="message-content text-white">${messageContent}</div>
+        </div>
+    `;
+    
+    messagesContainer.appendChild(messageDiv);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    
+    // Apply syntax highlighting to any new code blocks
+    messageDiv.querySelectorAll('pre code').forEach((block) => {
+        hljs.highlightElement(block);
+    });
+    
+    return messageDiv.querySelector('.message-content');
+}
+
+function addMessageActions(messageDiv, messageId, originalPrompt) {
+    if (messageDiv.querySelector('.message-actions')) {
+        return;
+    }
+    
+    const actionsDiv = document.createElement('div');
+    actionsDiv.className = 'message-actions flex items-center gap-2 mt-2';
+    actionsDiv.innerHTML = `
+        <button class="action-btn p-2 rounded-lg" onclick="copyMessage('${messageId}')" title="Copy">
+            <i class="fas fa-copy text-sm"></i>
+        </button>
+        <button class="action-btn p-2 rounded-lg" onclick="regenerateMessage('${messageId}', '${originalPrompt.replace(/'/g, "\\'")}')" title="Regenerate">
+            <i class="fas fa-redo text-sm"></i>
+        </button>
+        <button class="action-btn p-2 rounded-lg" onclick="previousVersion('${messageId}')" title="Previous version" id="prev-${messageId}">
+            <i class="fas fa-chevron-left text-sm"></i>
+        </button>
+        <span class="text-gray-400 text-xs px-2" id="version-${messageId}">1/1</span>
+        <button class="action-btn p-2 rounded-lg" onclick="nextVersion('${messageId}')" title="Next version" id="next-${messageId}">
+            <i class="fas fa-chevron-right text-sm"></i>
+        </button>
+    `;
+    
+    messageDiv.querySelector('.flex.flex-col').appendChild(actionsDiv);
+    updateMessageActions(messageId);
+}
+
+function updateMessageActions(messageId) {
+    const versions = messageVersions[messageId] || [];
+    const currentVersion = currentMessageVersions[messageId] || 0;
+    
+    const versionSpan = document.getElementById(`version-${messageId}`);
+    const prevBtn = document.getElementById(`prev-${messageId}`);
+    const nextBtn = document.getElementById(`next-${messageId}`);
+    
+    if (versionSpan) versionSpan.textContent = `${currentVersion + 1}/${versions.length}`;
+    if (prevBtn) prevBtn.disabled = currentVersion === 0;
+    if (nextBtn) nextBtn.disabled = currentVersion === versions.length - 1;
+}
+
+function copyMessage(messageId) {
+    const messageContent = document.querySelector(`[data-message-id="${messageId}"] .message-content`);
+    if (messageContent) {
+        const text = messageContent.textContent || messageContent.innerText;
+        navigator.clipboard.writeText(text).then(() => {
+            const copyBtn = document.querySelector(`[onclick="copyMessage('${messageId}')"]`);
+            const originalIcon = copyBtn.innerHTML;
+            copyBtn.innerHTML = '<i class="fas fa-check text-sm text-green-400"></i>';
+            setTimeout(() => {
+                copyBtn.innerHTML = originalIcon;
+            }, 1000);
+        });
+    }
+}
+
+function copyCode(codeId) {
+    const codeElement = document.getElementById(codeId);
+    if (codeElement) {
+        const text = codeElement.textContent || codeElement.innerText;
+        navigator.clipboard.writeText(text).then(() => {
+            const copyBtn = document.querySelector(`[onclick="copyCode('${codeId}')"]`);
+            const originalText = copyBtn.innerHTML;
+            copyBtn.innerHTML = '<i class="fas fa-check mr-1"></i>Copied!';
+            setTimeout(() => {
+                copyBtn.innerHTML = originalText;
+            }, 1000);
+        });
+    }
+}
+
+function regenerateMessage(messageId, originalPrompt) {
+    if (isTyping) return;
+    
+    disableInput();
+    showTypingIndicator();
+    sendAIRequest(originalPrompt, true, messageId);
+}
+
+function previousVersion(messageId) {
+    const versions = messageVersions[messageId] || [];
+    const currentVersion = currentMessageVersions[messageId] || 0;
+    
+    if (currentVersion > 0) {
+        currentMessageVersions[messageId] = currentVersion - 1;
+        const messageContent = document.querySelector(`[data-message-id="${messageId}"] .message-content`);
+        if (messageContent) {
+            updateMessage(messageContent, versions[currentVersion - 1]);
+        }
+        updateMessageActions(messageId);
+        
+        // Update chat history with the selected version
+        updateChatHistoryWithRegeneration(currentChatId, messageId, versions[currentVersion - 1]);
+        saveChatHistory();
+    }
+}
+
+function nextVersion(messageId) {
+    const versions = messageVersions[messageId] || [];
+    const currentVersion = currentMessageVersions[messageId] || 0;
+    
+    if (currentVersion < versions.length - 1) {
+        currentMessageVersions[messageId] = currentVersion + 1;
+        const messageContent = document.querySelector(`[data-message-id="${messageId}"] .message-content`);
+        if (messageContent) {
+            updateMessage(messageContent, versions[currentVersion + 1]);
+        }
+        updateMessageActions(messageId);
+        
+        // Update chat history with the selected version
+        updateChatHistoryWithRegeneration(currentChatId, messageId, versions[currentVersion + 1]);
+        saveChatHistory();
+    }
+}
+
+function updateMessage(element, content) {
+    element.innerHTML = formatMessage(content);
+    const messagesContainer = document.getElementById('messages');
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    
+    // Re-apply syntax highlighting to code blocks in this message
+    element.querySelectorAll('pre code').forEach((block) => {
+        hljs.highlightElement(block);
+    });
+}
+
+function formatMessage(content) {
+    // First escape all HTML to prevent XSS and execution
+    content = escapeHtml(content);
+    
+    // Now handle code blocks and other formatting
+    const codeBlocks = [];
+    const inlineCodeBlocks = [];
+    
+    // Handle code blocks (triple backticks)
+    content = content.replace(/```(\w+)?\n?([\s\S]*?)```/g, function(match, language, code) {
+        const index = codeBlocks.length;
+        const codeId = 'code-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+        const langLabel = language || 'text';
+        codeBlocks.push(`<div class="code-block">
+            <div class="code-header">
+                <span class="language-label">${langLabel}</span>
+                <button class="copy-code-btn" onclick="copyCode('${codeId}')">
+                    <i class="fas fa-copy mr-1"></i>Copy
+                </button>
+            </div>
+            <div class="code-content">
+                <pre><code id="${codeId}" class="language-${language || 'plaintext'}">${code.trim()}</code></pre>
+            </div>
+        </div>`);
+        return `__CODE_BLOCK_${index}__`;
+    });
+    
+    // Handle inline code (single backticks)
+    content = content.replace(/`([^`\n]+)`/g, function(match, code) {
+        const index = inlineCodeBlocks.length;
+        inlineCodeBlocks.push(`<code class="bg-gray-800 text-red-300 px-1 py-0.5 rounded text-sm">${code}</code>`);
+        return `__INLINE_CODE_${index}__`;
+    });
+    
+    // Handle paragraphs and line breaks
+    content = content.replace(/\n\n+/g, '</p><p>');
+    content = '<p>' + content + '</p>';
+    content = content.replace(/<p>([\s\S]*?)<\/p>/g, function(match, paragraph) {
+        return '<p>' + paragraph.replace(/\n/g, '<br>') + '</p>';
+    });
+    content = content.replace(/<p>\s*<\/p>/g, '');
+    
+    // Restore code blocks
+    content = content.replace(/__CODE_BLOCK_(\d+)__/g, function(match, index) {
+        return codeBlocks[parseInt(index)] || '';
+    });
+    
+    // Restore inline code blocks
+    content = content.replace(/__INLINE_CODE_(\d+)__/g, function(match, index) {
+        return inlineCodeBlocks[parseInt(index)] || '';
+    });
+    
+    return content;
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function showTypingIndicator() {
+    isTyping = true;
+    document.getElementById('typingIndicator').classList.remove('hidden');
+    document.getElementById('sendBtn').disabled = true;
+}
+
+function hideTypingIndicator() {
+    isTyping = false;
+    document.getElementById('typingIndicator').classList.add('hidden');
+    document.getElementById('sendBtn').disabled = false;
+}
+
+function handleFileUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    fetch('/upload', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            let content = `<i class="fas fa-paperclip mr-2"></i>Uploaded: ${escapeHtml(data.filename)}`;
+            if (data.image_url) {
+                content += `<br><img src="${data.image_url}" class="max-w-xs max-h-64 rounded-lg border-2 border-red-500 mt-2" alt="${escapeHtml(data.filename)}">`;
+            }
+            addMessage('user', content);
+            updateChatHistory(currentChatId, content, null);
+            saveChatHistory();
+        } else {
+            alert('Upload failed: ' + data.error);
+        }
+    })
+    .catch(error => {
+        alert('Upload error: ' + error.message);
+    });
+}
+
+function startNewChat(fromMessage = false) {
+    // Only create a new chat if we don't have one or we're not already in a new empty chat
+    if (!currentChatId || chatHistory.some(chat => chat.id === currentChatId && chat.messages.length > 0)) {
+        currentChatId = Date.now().toString();
+        // Only add to history if it doesn't already exist
+        if (!chatHistory.some(chat => chat.id === currentChatId)) {
+            chatHistory.push({ id: currentChatId, messages: [] });
+        }
+    }
+    
+    updateChatHistoryList();
+    
+    // Clear message versions for the new chat
+    messageVersions = {};
+    currentMessageVersions = {};
+    
+    saveChatHistory();
+    
+    // Clear messages and show intro
+    const messagesContainer = document.getElementById('messages');
+    messagesContainer.innerHTML = `
+        <div class="intro flex-1 flex items-center justify-center text-gray-300 text-xl" id="introMessage">
+            Welcome to DeepWorm
+        </div>
+    `;
+    
+    enableInput();
+    
+    if (!fromMessage) {
+        toggleSidebar();
+    }
+}
+
+function updateChatHistoryWithRegeneration(chatId, messageId, newAiMessage) {
+    let chat = chatHistory.find(c => c.id === chatId);
+    if (!chat) return;
+    
+    // Extract the AI message index from the messageId (format: chatId-ai-aiIndex)
+    const parts = messageId.split('-');
+    if (parts.length >= 3 && parts[1] === 'ai') {
+        const aiMessageIndex = parseInt(parts[2]);
+        
+        // Find the aiMessageIndex-th AI message in the chat history
+        let currentAiIndex = 0;
+        for (let i = 0; i < chat.messages.length; i++) {
+            if (chat.messages[i].ai !== undefined) {
+                if (currentAiIndex === aiMessageIndex) {
+                    chat.messages[i].ai = newAiMessage;
+                    break;
+                }
+                currentAiIndex++;
+            }
+        }
+    }
+    
+    updateChatHistoryList();
+}
+
+function updateChatHistory(chatId, userMessage, aiMessage) {
+    let chat = chatHistory.find(c => c.id === chatId);
+    
+    if (!chat) {
+        // Create new chat if it doesn't exist
+        chat = { id: chatId, messages: [] };
+        chatHistory.push(chat);
+    }
+    
+    // Handle user message
+    if (userMessage !== undefined && userMessage !== null) {
+        // Check if this exact user message already exists as the last message
+        const lastMessage = chat.messages[chat.messages.length - 1];
+        if (!lastMessage || lastMessage.user !== userMessage || lastMessage.ai !== undefined) {
+            chat.messages.push({ user: userMessage });
+        }
+    }
+    
+    // Handle AI response
+    if (aiMessage !== undefined && aiMessage !== null) {
+        const lastMessage = chat.messages[chat.messages.length - 1];
+        
+        // Find the last message that needs an AI response
+        if (lastMessage && lastMessage.ai === undefined) {
+            // Add AI response to existing user message
+            lastMessage.ai = aiMessage;
+        } else {
+            // Look for the most recent user message without an AI response
+            let foundUncompletedMessage = false;
+            for (let i = chat.messages.length - 1; i >= 0; i--) {
+                if (chat.messages[i].user && chat.messages[i].ai === undefined) {
+                    chat.messages[i].ai = aiMessage;
+                    foundUncompletedMessage = true;
+                    break;
+                }
+            }
+            
+            // If no uncompleted message found, this might be a regenerated response
+            // Don't add it to history as it should be handled by message versions
+            if (!foundUncompletedMessage) {
+                console.log('AI response without corresponding user message - likely a regeneration');
+                return; // Don't add to history
+            }
+        }
+    }
+    
+    updateChatHistoryList();
+    saveChatHistory();
+}
+
+function updateChatHistoryList() {
+    const historyContainer = document.getElementById('chatHistory');
+    if (!historyContainer) return; // Safety check
+    
+    historyContainer.innerHTML = '';
+    
+    // Sort chats by timestamp (newest first)
+    chatHistory.sort((a, b) => parseInt(b.id) - parseInt(a.id));
+    
+    chatHistory.forEach(chat => {
+        const chatItem = document.createElement('div');
+        chatItem.className = 'p-3 bg-gray-800 rounded-lg cursor-pointer hover:bg-gray-700 transition-all duration-200 relative group';
+        
+        // Get the first user message or use "New Chat"
+        const firstMessage = chat.messages.find(msg => msg.user)?.user || 'New Chat';
+        const truncatedMessage = firstMessage.length > 30 ? firstMessage.substring(0, 30) + '...' : firstMessage;
+        
+        chatItem.innerHTML = `
+            <div class="text-gray-300 truncate">${escapeHtml(truncatedMessage)}</div>
+            <div class="text-gray-500 text-xs">${new Date(parseInt(chat.id)).toLocaleString()}</div>
+            <button class="absolute right-2 top-2 text-gray-400 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity" onclick="deleteChat('${chat.id}', event)">
+                <i class="fas fa-trash text-sm"></i>
+            </button>
+        `;
+        
+        // Highlight current chat
+        if (chat.id === currentChatId) {
+            chatItem.classList.add('ring-2', 'ring-red-500');
+        }
+        
+        chatItem.onclick = () => loadChat(chat.id);
+        historyContainer.appendChild(chatItem);
+    });
+}
+
+function loadChat(chatId) {
+    const chat = chatHistory.find(c => c.id === chatId);
+    if (!chat) {
+        startNewChat();
+        return;
+    }
+    
+    currentChatId = chatId;
+    const messagesContainer = document.getElementById('messages');
+    messagesContainer.innerHTML = '';
+    
+    // Load saved message versions for this specific chat
+    const savedMessageVersions = localStorage.getItem('deepwormMessageVersions');
+    const savedCurrentVersions = localStorage.getItem('deepwormCurrentMessageVersions');
+    
+    if (savedMessageVersions) {
+        const allVersions = JSON.parse(savedMessageVersions);
+        messageVersions = {};
+        // Only load versions that belong to this chat
+        Object.keys(allVersions).forEach(key => {
+            if (key.startsWith(chatId + '-')) {
+                messageVersions[key] = allVersions[key];
+            }
+        });
+    } else {
+        messageVersions = {};
+    }
+    
+    if (savedCurrentVersions) {
+        const allCurrentVersions = JSON.parse(savedCurrentVersions);
+        currentMessageVersions = {};
+        // Only load current versions that belong to this chat
+        Object.keys(allCurrentVersions).forEach(key => {
+            if (key.startsWith(chatId + '-')) {
+                currentMessageVersions[key] = allCurrentVersions[key];
+            }
+        });
+    } else {
+        currentMessageVersions = {};
+    }
+    
+    // Load all messages
+    let aiMessageIndex = 0; // Separate counter for AI messages
+    chat.messages.forEach((msg, index) => {
+        if (msg.user) {
+            addMessage('user', msg.user, `${chatId}-user-${index}`);
+        }
+        if (msg.ai) {
+            const messageId = `${chatId}-ai-${aiMessageIndex}`;
+            
+            // Determine which version to display
+            let displayContent = msg.ai;
+            let currentVersionIndex = 0;
+            
+            if (messageVersions[messageId] && messageVersions[messageId].length > 0) {
+                currentVersionIndex = currentMessageVersions[messageId] || 0;
+                displayContent = messageVersions[messageId][currentVersionIndex];
+            } else {
+                // Initialize with the original message if no versions exist
+                messageVersions[messageId] = [msg.ai];
+                currentMessageVersions[messageId] = 0;
+            }
+            
+            const messageElement = addMessage('ai', displayContent, messageId);
+            
+            // Only add actions if we have a user message to regenerate from
+            if (msg.user) {
+                addMessageActions(messageElement.closest('.message'), messageId, msg.user);
+            }
+            
+            aiMessageIndex++;
+        }
+    });
+    
+    // Hide intro message if we have messages
+    if (chat.messages.length > 0) {
+        const introMessage = document.getElementById('introMessage');
+        if (introMessage) {
+            introMessage.classList.add('hidden');
+        }
+    }
+    
+    saveChatHistory();
+    enableInput();
+    toggleSidebar();
+}
+
+// Initialize when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    // Load saved chat history
+    loadChatHistory();
+    
+    // Update the chat history list immediately
+    updateChatHistoryList();
+    
+    // If we have a current chat ID, load that chat
+    if (currentChatId) {
+        const chatExists = chatHistory.some(chat => chat.id === currentChatId);
+        if (chatExists) {
+            loadChat(currentChatId);
+        } else {
+            startNewChat();
+        }
+    } else if (chatHistory.length > 0) {
+        // If no current chat but we have history, load the most recent one
+        const mostRecentChat = chatHistory.sort((a, b) => parseInt(b.id) - parseInt(a.id))[0];
+        loadChat(mostRecentChat.id);
+    } else {
+        // Otherwise start a new chat
+        startNewChat();
+    }
+    
+    // Initialize highlight.js
+    if (typeof hljs !== 'undefined') {
+        hljs.highlightAll();
+    }
+});
+</script>
+</body>
+</html>
