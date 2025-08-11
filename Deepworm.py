@@ -13,7 +13,7 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 # Create upload folder if it doesn't exist
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-API_KEY = "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"
+API_KEY = os.getenv("OPENROUTER_API_KEY")
 url = "https://openrouter.ai/api/v1/chat/completions"
 
 headers = {
